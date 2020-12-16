@@ -1187,7 +1187,7 @@ export class Component extends $RxElement {
     Native().components[this.name][this.$nid].state =
       Native().components[this.name][this.$nid].state
       || Native().components[this.name].state
-      || ProxifyState(v, this.name, this.$nid);
+      || ProxifyState(v, this);
   }
 
   get state() {
@@ -1478,46 +1478,43 @@ export class Input extends $RxElement {
       nid: Native().lock.nid,
       className: Native().lock.className
     };
-
-    const notifyWatchlist = (lock: NativeLock, value: any) => {
-      const instance = Native().components[lock.className][lock.nid];
-      if(instance && instance.served) {
-        for(let i = 0; i < instance.watchlist.length; i++) {
-          const w = instance.watchlist[i];
-          if(lock.key === w.prop) {
-            w.function(value);
-            w.oldValue = value;
+    if(!Native().shadowing) {
+      const notifyWatchlist = (lock: NativeLock, value: any) => {
+        const instance = Native().components[lock.className][lock.nid];
+        if(instance && instance.served) {
+          for(let i = 0; i < instance.watchlist.length; i++) {
+            const w = instance.watchlist[i];
+            if(lock.key === w.prop) {
+              w.function(value);
+              w.oldValue = value;
+            }
           }
         }
       }
-    }
-    const lock = this.$model, chain = lock.key.replace(lock.className + '.', '').split('.'),
-    sync = () => {
-      if (lock.type === 'state') {
-        protoSet(Native().components[lock.className][lock.nid].state, chain, (<HTMLInputElement>this.$node).value || '');
-        notifyWatchlist(lock, this.value());
-      } else if (lock.type === 'property') {
-        protoSet(Native().components[lock.className][lock.nid].instance, chain, (<HTMLInputElement>this.$node).value || '');
-        notifyWatchlist(lock, this.value());
+      const lock = this.$model,
+      sync = () => {
+        const chain = lock.key.replace(lock.className + '.', '').split('.')
+        if (lock.type === 'state') {
+          protoSet(Native().components[lock.className][lock.nid].state, chain, (<HTMLInputElement>this.$node).value || '');
+          notifyWatchlist(lock, (<HTMLInputElement>this.$node).value);
+        } else if (lock.type === 'property') {
+          protoSet(Native().components[lock.className][lock.nid].instance, chain, (<HTMLInputElement>this.$node).value || '');
+          notifyWatchlist(lock, (<HTMLInputElement>this.$node).value);
+        }
       }
-    }
-
-    if(!Native().shadowing) {
       const watcher: { object: any, prop: string, oldValue: any, function: Function } = {
         prop: Native().lock.key, oldValue: this.value(), function: (v: any) => {
-          console.log(v);
-          // if(v === undefined) this.value('');
-          // else this.value(v);
+          this.value(v);
         }, object: this.$model.type === 'state'
           ? Native().components[lock.className][lock.nid].state
-          : Native().components[lock.className][lock.nid]
+          : Native().components[lock.className][lock.nid].instance
       }
       Native().components[lock.className][lock.nid].watchlist.push(watcher);
+      this.value(object);
+      this.on({
+        input: () => sync()
+      });
     }
-    this.value(object);
-    this.on({
-      input: () => sync()
-    });
     return this;
   }
 

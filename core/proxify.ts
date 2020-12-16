@@ -165,20 +165,21 @@ export const Proxify = (object: RxElement) => {
     }
   });
 };
-const setLock = (object: any, componentName: string, name: string | number | symbol, nid: string) => {
+const setLock = (object: any, componentName: string, name: string | number | symbol, nid: string, state = false) => {
+  if(Native().shadowing || type(object[name]) === 'function' || type(name) === 'symbol' || (<string>name)[0] === '$' || (name === 'state')) return;
   Native().lock = Native().lock || <any>{};
-  if(object.name === undefined && type(name) !== 'symbol') {
+  if(object.__state__ || object.name === componentName) {
+    Native().lock.key = componentName + '.' + <string>name;
+  }else {
     Native().lock.key = Native().lock.key + '.' + <string>name;
   }
-  if(object.name === componentName && type(name) !== 'symbol') {
-    Native().lock.key = componentName + '.' + <string>name;
-  }
-  Native().lock.type = 'property';
+  Native().lock.type = state ? 'state' : 'property';
   Native().lock.className = componentName;
   Native().lock.nid = nid;
 }
 export const ProxifyComponent = (object: RxElement, componentName: string, nid: string): RxElement => {
   // proxify children
+  if(Native().shadowing) return object;
   if(object.$children) $observeArray(object, object.$children, '$children');
   return new Proxy(object, {
     get: (object, name: string, receiver) => {
@@ -193,7 +194,7 @@ export const ProxifyComponent = (object: RxElement, componentName: string, nid: 
       if(type(value) === 'object' && name !== '$children'
         && name !== '__root__' && name !== 'state' && name !== '$styles') {
         if(value instanceof $RxElement && !(<any>value).__proxy__) {
-          value = Proxify(value);
+          // value = Proxify(value);
         }else if(!value.__proxy__) {
           value = ProxifyComponent(value, componentName, nid);
         }
@@ -232,12 +233,13 @@ export const ProxifyComponent = (object: RxElement, componentName: string, nid: 
   });
 };
 
-export const ProxifyState = (object: RxElement, componentName: string, nid: string) => {
+export const ProxifyState = (object: any, host: RxElement) => {
+  if(Native().shadowing) return object;
   const setName = (object: any) => {
     for(let prop in object) {
       if(type(object[prop]) === 'object') {
         if(!object[prop].__proxy__) {
-          object[prop] = ProxifyState(object[prop], componentName, nid);
+          object[prop] = ProxifyState(object[prop], host);
         }
       }
     }
@@ -246,27 +248,18 @@ export const ProxifyState = (object: RxElement, componentName: string, nid: stri
   return new Proxy(object, {
     get: (object, name, receiver) => {
       if(name == '__proxy__') return true;
-      Native().lock = Native().lock || {} as any;
-      if(object.name === undefined && type((<any>object)[name]) !== 'function'
-        && type(name) === 'string') {
-        Native().lock.key = Native().lock.key + '.' + <string>name;
-      }
-      if((<any>object).__state__ && type(name) === 'string') {
-        Native().lock.key = componentName + '.' + <string>name;
-      }
-      Native().lock.type = 'state';
-      Native().lock.className = componentName;
-      Native().lock.nid = nid;
+      setLock(object, host.name, name, host.$nid, true);
       return Reflect.get(object, name, receiver);
     },
     set: (object, name, value, receiver) => {
       const oldvalue = (<any>object)[name];
+      setLock(object, host.name, name, host.$nid, true);
       if(type(value) === 'object' && name != '$children' && name != '__root__') {
         if(value instanceof $RxElement) {
           throw new Error(`Object of RxElement (${value}) cannot be set as stateful`);
         }else {
           if(!value.__proxy__) {
-            value = ProxifyState(value, componentName, nid);
+            value = ProxifyState(value, host);
           }
         }
       } else if (type(value) == 'array') {
@@ -275,17 +268,17 @@ export const ProxifyState = (object: RxElement, componentName: string, nid: stri
         // throw error
       }
       (<any>object)[name] = value;
-      if(Native() && Native().components[componentName][nid].served) {
+      if(Native() && Native().components[host.name][host.$nid].served) {
         // send notification to watchlist
-        for(let i = 0; i < Native().components[componentName][nid].watchlist.length; i++) {
-          const w = Native().components[componentName][nid].watchlist[i];
+        for(let i = 0; i < Native().components[host.name][host.$nid].watchlist.length; i++) {
+          const w = Native().components[host.name][host.$nid].watchlist[i];
           if(Native().lock.key + '.' + <string>name === w.prop && w.oldValue == oldvalue) {
             w.function(value);
             w.oldValue = value;
           }
         }
         // trigger component redraw
-        Native().updateState(componentName, nid);
+        Native().updateState(host.name, host.$nid);
       }
       return Reflect.set(object, name, value, receiver);
     }
@@ -305,7 +298,8 @@ export const ProxifyState = (object: RxElement, componentName: string, nid: stri
         watcher.object = Native().components[lock.className][lock.nid];
       }
       if(Native().components[lock.className][lock.nid].watchlist.filter(i => {
-        return ''+i.function == ''+watcher.function && i.prop == watcher.prop;
+        return i.function !== undefined;
+        // return ''+i.function == ''+watcher.function && i.prop == watcher.prop;
       }).length < 1) {
         Native().components[lock.className][lock.nid].watchlist.push(watcher);
       }
