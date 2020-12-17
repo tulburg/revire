@@ -24,5 +24,6 @@ export default class App extends PageComponent {
       new H1().text(this.sample.name.page)
     );
     this.sample.name.page = 'cool';
+    this.sample.name.page.watch(v => console.log(v));
   }
 }

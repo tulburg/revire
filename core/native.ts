@@ -114,9 +114,8 @@ class Native {
       // }
     } else if (type == NativeEventType.update) {
       this.patchProps(data.old, data.new);
-      this.patchCSS(data.old, data.new.$rules);
+      // this.patchCSS(data.old, data.new.$rules);
       this.patchAttrs(data.old.$node, data.new.$node);
-      console.log(data);
     } else if(type == NativeEventType.replace) {
       if(data.new instanceof $RxElement) this.createElement(data.new, false);
       const newNode: any = (data.new.$node) ? data.new.$node : data.new;
@@ -541,7 +540,6 @@ class Native {
           } else {
             if(visible(arr2, a)) {
               // insert b
-              console.log("> insert", props(a), props(b))
               arr1.splice(index, 0, b);
               this.$notify({ old: p1, newValue: arr1, index: index }, NativeEventType.insert);
               index++;

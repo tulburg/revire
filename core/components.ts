@@ -3,7 +3,7 @@ import {
   RxElement, ElementEvent, NativeLock, StyleProperties, flexAlignment, flexAlignmentItem, ConfigType,
   globalValues, colorType, borderStyleType, borderWidthType, imageType, spaceType, breakType, numberType
 } from './types';
-import { ProxifyComponent, ProxifyState } from './proxify';
+import { ProxifyComponent, ProxifyState, Proxify } from './proxify';
 import NativeClass from './native';
 import {createRules} from './styles';
 
@@ -78,7 +78,7 @@ export class $RxElement {
   constructor(tagName?: string) {
     this.$tagName = tagName || this.$tagName;
     this.$className = this.$tagName[0].toLowerCase() + Math.random().toString(36).substr(2, 9);
-    // return Proxify(this);
+    return Proxify(this);
   }
 
   addChild(...children: RxElement[]): RxElement {
@@ -88,7 +88,7 @@ export class $RxElement {
     if(this.$children) {
       for(let i = 0; i < children.length; i++) {
         if(children[i].$root !== undefined) {
-          throw `Cannot addChild: ${children[i].name} is already attached`;
+          console.error(`Cannot addChild: ${children[i].name} is already attached`);
         }
         const nullIndex = this.$children.indexOf(null);
         if(nullIndex > -1) this.$children.splice(nullIndex, 1, children[i])
@@ -97,7 +97,7 @@ export class $RxElement {
       }
       return this;
     }else {
-      throw `Cannot addChild: ${this.name} does not accept children`;
+      console.error(`Cannot addChild: ${this.name} does not accept children`);
     }
   }
 
