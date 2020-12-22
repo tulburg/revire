@@ -3,7 +3,7 @@ import {
   RxElement, ElementEvent, NativeLock, StyleProperties, flexAlignment, flexAlignmentItem, ConfigType,
   globalValues, colorType, borderStyleType, borderWidthType, imageType, spaceType, breakType, numberType
 } from './types';
-import { ProxifyComponent, ProxifyState, Proxify } from './proxify';
+import { ProxifyComponent, ProxifyState } from './proxify';
 import NativeClass from './native';
 import {createRules} from './styles';
 
@@ -78,7 +78,7 @@ export class $RxElement {
   constructor(tagName?: string) {
     this.$tagName = tagName || this.$tagName;
     this.$className = this.$tagName[0].toLowerCase() + Math.random().toString(36).substr(2, 9);
-    return Proxify(this);
+    // return Proxify(this);
   }
 
   addChild(...children: RxElement[]): RxElement {
@@ -93,6 +93,12 @@ export class $RxElement {
         const nullIndex = this.$children.indexOf(null);
         if(nullIndex > -1) this.$children.splice(nullIndex, 1, children[i])
         else this.$children.push(children[i]);
+        if(this.$node) {
+          const node = !children[i].$node
+            ? (<any>window).Native.createElement(children[i])
+            : children[i].$node;
+          this.$node.appendChild(node);
+        }
         children[i].$root = this;
       }
       return this;
@@ -105,6 +111,9 @@ export class $RxElement {
     if(this.$children.indexOf(child) > -1) {
       child.$root = undefined;
       this.$children.splice(this.$children.indexOf(child), 1, null);
+      if(this.$node && child.$node.parentNode) {
+        this.$node.removeChild(child.$node);
+      }
       return this;
     }else {
       console.warn(`Cannot removeChild: ${child.name} is not a child of ${this.name}`);
@@ -623,6 +632,7 @@ export class $RxElement {
   src: (_?: string | number | string[] | number[]) => RxElement
   srcDoc: (_?: string | number | string[] | number[]) => RxElement
   srcSet: (_?: string | number | string[] | number[]) => RxElement
+  srcObject: (_?: string) => RxElement
   standBy: (_?: string | number | string[] | number[]) => RxElement
   start: (_?: string | number | string[] | number[]) => RxElement
   step: (_?: string | number | string[] | number[]) => RxElement
@@ -1503,7 +1513,7 @@ export class Input extends $RxElement {
         }
       }
       const watcher: { object: any, prop: string, oldValue: any, function: Function } = {
-        prop: Native().lock.key, oldValue: this.value(), function: (v: any) => {
+        prop: lock.key, oldValue: this.value(), function: (v: any) => {
           this.value(v);
         }, object: this.$model.type === 'state'
           ? Native().components[lock.className][lock.nid].state

@@ -417,6 +417,7 @@ const Props: {
     '$src': 'attr.src',
     '$srcDoc': 'attr.srcdoc',
     '$srcSet': 'attr.srcset',
+    '$srcObject': 'attr.srcObject',
     '$standBy': 'attr.standby',
     '$start': 'attr.start',
     '$step': 'attr.step',

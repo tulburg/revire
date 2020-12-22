@@ -722,6 +722,7 @@ export type RxElement = {
   src: (value: string | number | string[] | number[]) => RxElement
   srcDoc: (value: string | number | string[] | number[]) => RxElement
   srcSet: (value: string | number | string[] | number[]) => RxElement
+  srcObject: (value: string) => RxElement
   standBy: (value: string | number | string[] | number[]) => RxElement
   start: (value: string | number | string[] | number[]) => RxElement
   step: (value: string | number | string[] | number[]) => RxElement

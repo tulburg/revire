@@ -298,7 +298,7 @@ export const ProxifyState = (object: any, host: RxElement) => {
         watcher.object = Native().components[lock.className][lock.nid];
       }
       if(Native().components[lock.className][lock.nid].watchlist.filter(i => {
-        return i.function !== undefined;
+        return i.function === undefined;
         // return ''+i.function == ''+watcher.function && i.prop == watcher.prop;
       }).length < 1) {
         Native().components[lock.className][lock.nid].watchlist.push(watcher);
